@@ -238,10 +238,10 @@ query_view(DbName, DesignName, ViewName, ViewFoldFun, #view_query_args{
                     send_row = make_map_row_fold_fun(ViewFoldFun)
                 }),
             FoldAccInit = {Limit, SkipCount, undefined, []},
-            {ok, _, {_Lim, _, _, ViewFoldAcc}} = 
+            {ok, _, {_Lim, _, _, {Offset, ViewFoldAcc}}} = 
                 couch_view:fold(View, FoldlFun, FoldAccInit,
                                 [{dir, Dir}, {start_key, Start}]),
-            {ok, {RowCount, ViewFoldAcc}};
+            {ok, {RowCount, Offset, ViewFoldAcc}};
         {not_found, Reason} ->
             case couch_view:get_reduce_view(Db, DesignId, ViewName, Stale) of
                 {ok, View, _Group} ->
@@ -286,9 +286,9 @@ start_map_view_fold_fun(_Req, _Etag, _RowCount, Offset, _Acc, _UpdateSeq) ->
     {ok, nil, {Offset, []}}.
 
 make_map_row_fold_fun(ViewFoldFun) ->
-    fun(_Resp, _Db, {{Key, DocId}, Value}, _IncludeDocs, _Conflicts, Acc) ->
+    fun(_Resp, _Db, {{Key, DocId}, Value}, _IncludeDocs, _Conflicts, {Offset, Acc}) ->
         {Go, NewAcc} = ViewFoldFun({{Key, DocId}, Value}, Acc),
-        {Go, NewAcc}
+        {Go, {Offset, NewAcc}}
     end.
 
 make_include_docs_row_fold_fun() ->
